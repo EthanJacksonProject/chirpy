@@ -5,8 +5,42 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"sync/atomic"
 )
+
+// func censorWords(content string) string {
+// 	bad_words := []string{"kerfuffle", "sharbert", "fornax"}
+// 	res := ""
+
+// 	for _, wrd := range strings.Split(content, " ") {
+// 		if slices.Contains(bad_words, strings.ToLower(wrd)) {
+// 			res = res + " ****"
+// 		} else {
+// 			res = res + " " + wrd
+// 		}
+// 	}
+
+// 	return res[1:]
+// }
+
+// provided solution that skips weird string trimming
+func censorWords(content string) string {
+	badWords := map[string]struct{}{
+		"kerfuffle": {},
+		"sharbert":  {},
+		"fornax":    {},
+	}
+
+	words := strings.Split(content, " ")
+	for i, wrd := range words {
+		if _, ok := badWords[strings.ToLower(wrd)]; ok {
+			words[i] = "****"
+		}
+	}
+
+	return strings.Join(words, " ")
+}
 
 func readynessHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
@@ -58,12 +92,15 @@ func (cfg *apiConfig) validateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Censor cursing
+	cleaned_msg := censorWords(params.Body)
+
 	// it passses
 	// create a Valid struct to represent basic success message
 	type Valid struct {
-		Res bool `json:"valid"`
+		Res string `json:"cleaned_body"`
 	}
-	resp := Valid{true}
+	resp := Valid{cleaned_msg}
 	respondWithJSON(w, 200, resp)
 }
 
