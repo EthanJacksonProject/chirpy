@@ -11,4 +11,6 @@ func (cfg *apiConfig) resetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cfg.dbQueries.DropAllUsers(r.Context())
+	cfg.dbQueries.DropAllChirps(r.Context())
+	cfg.dbQueries.DropAllRefreshTokens(r.Context())
 }

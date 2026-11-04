@@ -5,34 +5,53 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/EthanJacksonProject/chirpy/internal/auth"
+	"github.com/EthanJacksonProject/chirpy/internal/database"
 	"github.com/google/uuid"
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
+	ID           uuid.UUID `json:"id"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+	Email        string    `json:"email"`
+	Token        string    `json:"token"`
+	RefreshToken string    `json:"refresh_token"`
+}
+
+func UserFromDBUser(dbUsr database.User) User {
+	return User{
+		ID:        dbUsr.ID,
+		Email:     dbUsr.Email,
+		CreatedAt: dbUsr.CreatedAt,
+		UpdatedAt: dbUsr.UpdatedAt,
+	}
 }
 
 func (cfg *apiConfig) postUserHandler(w http.ResponseWriter, r *http.Request) {
 	// unmarshal body to get email and responds with User struct
-	type UserEmail struct {
-		Email string `json:"email"`
+	type UserBodyRaw struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	userEmail := UserEmail{}
-	err := decoder.Decode(&userEmail)
-
+	userBody := UserBodyRaw{}
+	err := decoder.Decode(&userBody)
 	// something went wrong when decoding POST
 	if err != nil {
 		respondWithError(w, 500, err.Error())
 		return
 	}
-	email := userEmail.Email
 
-	dbUsr, err := cfg.dbQueries.CreateUser(r.Context(), email)
+	hashedPW, _ := auth.HashPassword(userBody.Password)
+
+	userParams := database.CreateUserParams{
+		Email:          userBody.Email,
+		HashedPassword: hashedPW,
+	}
+
+	dbUsr, err := cfg.dbQueries.CreateUser(r.Context(), userParams)
 
 	if err != nil {
 		respondWithError(w, 500, err.Error())

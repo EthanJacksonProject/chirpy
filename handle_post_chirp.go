@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/EthanJacksonProject/chirpy/internal/auth"
 	"github.com/EthanJacksonProject/chirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -54,8 +56,7 @@ type Chirp struct {
 func (cfg *apiConfig) postChirpHandler(w http.ResponseWriter, r *http.Request) {
 	//"body": "This is an opinion I need to share with the world"'
 	type parameters struct {
-		Body   string    `json:"body"`
-		UserID uuid.UUID `json:"user_id"`
+		Body string `json:"body"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -79,22 +80,32 @@ func (cfg *apiConfig) postChirpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// it passses
 	// create a Valid struct to represent basic success message
-	type Valid struct {
+	type cleanedChripBody struct {
 		Res string `json:"cleaned_body"`
 	}
-	validRes := Valid{cleaned_msg}
+	validMessage := cleanedChripBody{cleaned_msg}
 
-	// .Body, arg.UserID
-	type chirpParams struct {
-		Body   string
-		UserID uuid.UUID
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, fmt.Sprintf("failed to get token: %v", err))
+		return
+	}
+	userID, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token")
+		return
 	}
 
 	chirpy := database.CreateChirpParams{
-		Body:   validRes.Res,
-		UserID: params.UserID,
+		Body:   validMessage.Res,
+		UserID: userID,
 	}
+
 	chirpRes, err := cfg.dbQueries.CreateChirp(r.Context(), chirpy)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 
 	friendlyChirp := Chirp{
 		ID:        chirpRes.ID,

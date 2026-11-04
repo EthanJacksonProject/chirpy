@@ -27,29 +27,38 @@ func main() {
 	appHandler := http.StripPrefix("/app", http.FileServer(http.Dir(".")))
 
 	// set up shared API config
-	apiCfg := apiConfig{}
-
-	//dbQueries:= database.New(db)
-	// Hook up DB querier to api config
-	apiCfg.dbQueries = database.New(db)
-
-	// set platform
-	apiCfg.platform = os.Getenv("PLATFORM")
+	apiCfg := apiConfig{
+		dbQueries: database.New(db),        // Hook up DB querier to api config
+		platform:  os.Getenv("PLATFORM"),   // set platform
+		jwtSecret: os.Getenv("JWT_SECRET"), // set token
+	}
 
 	// Hook up middleware hit counter
 	// any hits to `/app/` will increment
+	// is HandlerFunc
 	appMiddlewareHandler := apiCfg.middlewearMetricsInc(appHandler)
 
 	// create root mux for routing
 	mux := http.NewServeMux()
-	mux.Handle("/app/", appMiddlewareHandler)
+	mux.Handle("/app/", appMiddlewareHandler) // serve
 
 	mux.HandleFunc("GET /admin/metrics", apiCfg.adminMetricHandler)
 	mux.HandleFunc("POST /admin/reset", apiCfg.resetHandler)
 
 	mux.HandleFunc("GET /api/healthz", readynessHandler)
+
 	mux.HandleFunc("POST /api/users", apiCfg.postUserHandler)
+	mux.HandleFunc("PUT /api/users", apiCfg.putUsersHandler)
+
+	mux.HandleFunc("GET /api/chirps", apiCfg.getChirpsHandler)
+	mux.HandleFunc("GET /api/chirps/{chirpID}", apiCfg.getChirpsByIDHandler)
+
 	mux.HandleFunc("POST /api/chirps", apiCfg.postChirpHandler)
+	mux.HandleFunc("DELETE /api/chirps/{chirpID}", apiCfg.deleteChirpByIDHandler)
+
+	mux.HandleFunc("POST /api/login", apiCfg.postLoginHandler)
+	mux.HandleFunc("POST /api/refresh", apiCfg.postRefreshHandler)
+	mux.HandleFunc("POST /api/revoke", apiCfg.postRevokeHandler)
 
 	server := http.Server{Handler: mux, Addr: ":8080"}
 
