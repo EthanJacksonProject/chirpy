@@ -17,14 +17,16 @@ type User struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 func UserFromDBUser(dbUsr database.User) User {
 	return User{
-		ID:        dbUsr.ID,
-		Email:     dbUsr.Email,
-		CreatedAt: dbUsr.CreatedAt,
-		UpdatedAt: dbUsr.UpdatedAt,
+		ID:          dbUsr.ID,
+		Email:       dbUsr.Email,
+		CreatedAt:   dbUsr.CreatedAt,
+		UpdatedAt:   dbUsr.UpdatedAt,
+		IsChirpyRed: dbUsr.IsChirpyRed,
 	}
 }
 

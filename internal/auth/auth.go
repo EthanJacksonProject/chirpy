@@ -173,8 +173,33 @@ func GetBearerToken(headers http.Header) (string, error) {
 	return tokenSlice[1], nil
 }
 
+func getAuthTokenFromHeader(headers http.Header) (string, error) {
+	// ApiKey TOKEN_STRING
+	// return TOKEN_STRING
+	token := headers.Get("Authorization")
+
+	if token == "" {
+		return "", fmt.Errorf("Header Authorization not present")
+	}
+
+	tokenSlice := strings.Split(token, " ")
+
+	if len(tokenSlice) != 2 {
+		return "", fmt.Errorf("Malformed Auth TOKEN header")
+	}
+	if tokenSlice[0] != "ApiKey" {
+		return "", fmt.Errorf("Invalid Authorization header typ")
+	}
+
+	return tokenSlice[1], nil
+}
+
 func MakeRefreshToken() string {
 	bytes := make([]byte, 32)
 	rand.Read(bytes)
 	return hex.EncodeToString(bytes)
+}
+
+func GetAPIKey(headers http.Header) (string, error) {
+	return getAuthTokenFromHeader(headers)
 }

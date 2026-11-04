@@ -31,6 +31,7 @@ func main() {
 		dbQueries: database.New(db),        // Hook up DB querier to api config
 		platform:  os.Getenv("PLATFORM"),   // set platform
 		jwtSecret: os.Getenv("JWT_SECRET"), // set token
+		polkaKey:  os.Getenv("POLKA_KEY"),
 	}
 
 	// Hook up middleware hit counter
@@ -59,6 +60,8 @@ func main() {
 	mux.HandleFunc("POST /api/login", apiCfg.postLoginHandler)
 	mux.HandleFunc("POST /api/refresh", apiCfg.postRefreshHandler)
 	mux.HandleFunc("POST /api/revoke", apiCfg.postRevokeHandler)
+
+	mux.HandleFunc("POST /api/polka/webhooks", apiCfg.postPolkaWebhookHandler)
 
 	server := http.Server{Handler: mux, Addr: ":8080"}
 

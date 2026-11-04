@@ -20,7 +20,7 @@ VALUES (
     $1,
     $2
 )
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type CreateUserParams struct {
@@ -37,6 +37,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -51,7 +52,7 @@ func (q *Queries) DropAllUsers(ctx context.Context) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-select id, created_at, updated_at, email, hashed_password from users WHERE email = $1
+select id, created_at, updated_at, email, hashed_password, is_chirpy_red from users WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
@@ -63,6 +64,33 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
+	)
+	return i, err
+}
+
+const setChirpyRedStatusByUserID = `-- name: SetChirpyRedStatusByUserID :one
+UPDATE users
+SET is_chirpy_red = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
+`
+
+type SetChirpyRedStatusByUserIDParams struct {
+	ID          uuid.UUID
+	IsChirpyRed bool
+}
+
+func (q *Queries) SetChirpyRedStatusByUserID(ctx context.Context, arg SetChirpyRedStatusByUserIDParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, setChirpyRedStatusByUserID, arg.ID, arg.IsChirpyRed)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -71,7 +99,7 @@ const setEmailAndPWHashById = `-- name: SetEmailAndPWHashById :one
 UPDATE users
 SET email = $2, hashed_password = $3, updated_at = NOW()
 WHERE id = $1
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type SetEmailAndPWHashByIdParams struct {
@@ -89,6 +117,7 @@ func (q *Queries) SetEmailAndPWHashById(ctx context.Context, arg SetEmailAndPWHa
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -97,7 +126,7 @@ const setEmailByID = `-- name: SetEmailByID :one
 UPDATE users
 SET email = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type SetEmailByIDParams struct {
@@ -114,6 +143,7 @@ func (q *Queries) SetEmailByID(ctx context.Context, arg SetEmailByIDParams) (Use
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
@@ -122,7 +152,7 @@ const setPasswordHashByID = `-- name: SetPasswordHashByID :one
 UPDATE users
 SET hashed_password = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, created_at, updated_at, email, hashed_password
+RETURNING id, created_at, updated_at, email, hashed_password, is_chirpy_red
 `
 
 type SetPasswordHashByIDParams struct {
@@ -139,6 +169,7 @@ func (q *Queries) SetPasswordHashByID(ctx context.Context, arg SetPasswordHashBy
 		&i.UpdatedAt,
 		&i.Email,
 		&i.HashedPassword,
+		&i.IsChirpyRed,
 	)
 	return i, err
 }
