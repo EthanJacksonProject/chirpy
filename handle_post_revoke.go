@@ -65,6 +65,5 @@ func (cfg *apiConfig) postRevokeHandler(w http.ResponseWriter, r *http.Request) 
 	// }
 	// respondWithJSON(w, http.StatusNoContent, Empty{})
 	w.WriteHeader(http.StatusNoContent)
-	return
 
 }

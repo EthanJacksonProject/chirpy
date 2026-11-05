@@ -2,8 +2,10 @@ package main
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/EthanJacksonProject/chirpy/internal/database"
+	"github.com/google/uuid"
 )
 
 func DatabaseChirpToChirp(dbChirp database.Chirp) Chirp {
@@ -28,16 +30,44 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	//     "user_id": "123e4567-e89b-12d3-a456-426614174000"
 	//   },
 
-	chirps, err := cfg.dbQueries.GetChirps(r.Context())
-	if err != nil {
-		respondWithError(w, 500, "Failed to get chirps from DB")
+	var dbChirps []database.Chirp
+	var err error
+	var author uuid.UUID
+
+	authorID := r.URL.Query().Get("author_id")
+
+	sortDir := r.URL.Query().Get("sort")
+	if sortDir == "" {
+		sortDir = "asc"
+	}
+	if sortDir != "asc" && sortDir != "desc" {
+		respondWithError(w, http.StatusBadRequest, "Malformed sort")
 		return
 	}
 
-	chirpsSlice := make([]Chirp, len(chirps))
+	if authorID != "" {
+		// Author ID provided
+		// look it up
+		author, err = uuid.Parse(authorID)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		dbChirps, err = cfg.dbQueries.GetChirpsByUserID(r.Context(), author)
 
-	for i, v := range chirps {
-		chirpsSlice[i] = DatabaseChirpToChirp(v)
+	} else {
+		// Author ID not provided
+		// list everything
+		dbChirps, err = cfg.dbQueries.GetChirps(r.Context())
+	}
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve chirps")
+		return
+	}
+
+	chirps := make([]Chirp, len(dbChirps))
+	for i, v := range dbChirps {
+		chirps[i] = DatabaseChirpToChirp(v)
 	}
 
 	// resp, err := json.Marshal(chirpsSlice)
@@ -46,6 +76,15 @@ func (cfg *apiConfig) getChirpsHandler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	respondWithJSON(w, 200, chirpsSlice)
+	if sortDir == "desc" {
+		sort.Slice(chirps, func(i, j int) bool {
+			if sortDir == "desc" {
+				return chirps[i].CreatedAt.After(chirps[j].CreatedAt) // i was later, after j, so it descends
+			}
+			return chirps[i].CreatedAt.Before(chirps[j].CreatedAt) // i was before j, so keep it asending through list
+		})
+	}
+
+	respondWithJSON(w, 200, chirps)
 
 }
